@@ -1,31 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "crons": [
-    {
-      "path": "/api/cleanup/files",
-      "schedule": "0 2 * * *"
     }
   ]
 }
