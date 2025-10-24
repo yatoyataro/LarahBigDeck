@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createDeckWithCards, uploadFile, processUploadWithAI, type CardInput } from "@/services/uploadService";
 import { useAuth } from "@/hooks/useAuth";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { convertDocxToPdf } from "@/lib/docxToPdf";
 
 interface ManualCard {
   id: string;
@@ -28,6 +30,8 @@ const Upload = () => {
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   
   // Form state
   const [deckTitle, setDeckTitle] = useState("");
@@ -147,26 +151,68 @@ const Upload = () => {
 
     try {
       setLoading(true);
+      setProgress(10);
+      setProgressMessage("Preparing file...");
+      
+      let fileToUpload = selectedFile;
+      
+      // Check if file is DOCX and convert to PDF
+      if (selectedFile.name.endsWith('.docx')) {
+        setProgressMessage("Converting DOCX to PDF...");
+        setProgress(20);
+        
+        try {
+          const pdfBlob = await convertDocxToPdf(selectedFile);
+          const pdfFileName = selectedFile.name.replace('.docx', '.pdf');
+          fileToUpload = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
+          
+          toast({
+            title: "Conversion successful",
+            description: "DOCX file converted to PDF",
+          });
+        } catch (error) {
+          console.error('DOCX conversion error:', error);
+          toast({
+            title: "Conversion failed",
+            description: "Failed to convert DOCX to PDF. Please try uploading a PDF file instead.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          setProgress(0);
+          return;
+        }
+      }
       
       // Step 1: Upload file
-      toast({
-        title: "Uploading...",
-        description: "Uploading your file to storage",
-      });
+      setProgressMessage("Uploading file to storage...");
+      setProgress(30);
       
-      const { deck, upload } = await uploadFile(selectedFile, deckTitle, deckDescription);
+      const { deck, upload } = await uploadFile(fileToUpload, deckTitle, deckDescription);
       
       if (!upload) {
         throw new Error('Upload failed - no upload record created');
       }
       
       // Step 2: Process with AI
-      toast({
-        title: "Processing with AI...",
-        description: "Generating flashcards from your document. This may take a minute.",
-      });
+      setProgressMessage("AI is analyzing your document...");
+      setProgress(50);
+      
+      // Simulate progress during AI processing
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 1000);
       
       const result = await processUploadWithAI((upload as any).id);
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      setProgressMessage("Finalizing...");
       
       toast({
         title: "Success! 🎉",
@@ -174,7 +220,9 @@ const Upload = () => {
       });
       
       // Navigate to the deck
-      navigate(`/study/${(deck as any).id}`);
+      setTimeout(() => {
+        navigate(`/study/${(deck as any).id}`);
+      }, 500);
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -184,6 +232,8 @@ const Upload = () => {
       });
     } finally {
       setLoading(false);
+      setProgress(0);
+      setProgressMessage("");
     }
   };
 
@@ -271,6 +321,12 @@ const Upload = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
+      <ProgressBar 
+        isProcessing={loading} 
+        progress={progress} 
+        message={progressMessage} 
+      />
+      
       <main className="container mx-auto px-4 py-8 max-w-3xl flex-1">
         <Button
           variant="ghost"
@@ -296,6 +352,7 @@ const Upload = () => {
                 className="mt-2"
                 value={deckTitle}
                 onChange={(e) => setDeckTitle(e.target.value)}
+                disabled={loading}
                 required
               />
             </div>
@@ -308,6 +365,7 @@ const Upload = () => {
                 className="mt-2 min-h-[100px]"
                 value={deckDescription}
                 onChange={(e) => setDeckDescription(e.target.value)}
+                disabled={loading}
               />
             </div>
           </div>
@@ -315,8 +373,8 @@ const Upload = () => {
 
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload">Upload File</TabsTrigger>
-            <TabsTrigger value="manual">Create Manually</TabsTrigger>
+            <TabsTrigger value="upload" disabled={loading}>Upload File</TabsTrigger>
+            <TabsTrigger value="manual" disabled={loading}>Create Manually</TabsTrigger>
           </TabsList>
 
           <TabsContent value="upload" className="space-y-6">

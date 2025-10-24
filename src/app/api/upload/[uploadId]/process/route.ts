@@ -103,44 +103,59 @@ export async function POST(
     }
 
     // Prepare the prompt for Gemini
-    const prompt = `You are an expert at creating educational flashcards from documents. 
+    const prompt = `You are an expert at creating educational multiple choice questions from documents. 
 
-Analyze the provided document and create comprehensive flashcards that cover the main concepts, definitions, and important information.
-Make sure that all the details are accurate and relevant from the document.
+    Analyze the provided document and create comprehensive multiple choice questions that cover the main concepts, definitions, and important information.
+    Make sure that all the details are accurate and relevant from the document.
 
-For each flashcard, create:
-1. A clear, concise question or term
-2. A detailed but focused answer or definition
-3. Identify if it should be a flashcard or multiple choice question
-4. For multiple choice questions, provide 4 options with the first one being correct
+    IMPORTANT: Create ONLY multiple choice questions. Do NOT create regular flashcards.
 
-Return the flashcards in the following JSON format:
-{
-  "flashcards": [
+    For each multiple choice question:
+    1. Create a clear, specific question that tests understanding
+    2. Provide exactly 4 answer options
+    3. The FIRST option must ALWAYS be the correct answer
+    4. The other 3 options should be plausible but incorrect distractors
+    5. Make the incorrect options challenging but clearly wrong to someone who knows the material
+    6. Add relevant tags for categorization
+
+    Return the questions in the following JSON format:
     {
-      "question": "What is...",
-      "answer": "...",
-      "type": "flashcard",
-      "tags": ["topic1", "topic2"]
-    },
-    {
-      "question": "Which of the following...",
-      "answer": "Correct answer",
-      "type": "multiple_choice",
-      "options": ["Correct answer", "Wrong answer 1", "Wrong answer 2", "Wrong answer 3"],
-      "tags": ["topic1"]
+    "flashcards": [
+        {
+        "question": "Which of the following best describes...",
+        "answer": "The correct answer",
+        "type": "multiple_choice",
+        "options": ["Correct answer", "Incorrect option 1", "Incorrect option 2", "Incorrect option 3"],
+        "tags": ["topic1", "topic2"]
+        },
+        {
+        "question": "What is the primary purpose of...",
+        "answer": "The correct answer",
+        "type": "multiple_choice",
+        "options": ["Correct answer", "Plausible wrong answer", "Another wrong answer", "Third wrong answer"],
+        "tags": ["topic1"]
+        }
+    ]
     }
-  ]
-}
 
-Create between 15-60 flashcards depending on the content length. Focus on:
-- Key concepts and definitions
-- Important facts and figures
-- Processes and procedures
-- Relationships and comparisons
-- Examples and applications
+    Create between 15-60 multiple choice questions depending on the content length. Focus on:
+    - Key concepts and their definitions
+    - Important facts, figures, and data
+    - Processes, procedures, and methodologies
+    - Cause and effect relationships
+    - Comparisons and contrasts
+    - Applications and examples
+    - Critical thinking and analysis
 
-Ensure questions are clear, answers are accurate, and content is well-organized.`
+    Guidelines for quality questions:
+    - Questions should be clear and unambiguous
+    - Avoid "all of the above" or "none of the above" options
+    - Make distractors realistic and based on common misconceptions
+    - Test understanding, not just memorization
+    - Cover different difficulty levels (easy, medium, hard)
+    - Ensure the correct answer is definitively correct
+
+    Remember: ALL questions must be multiple choice format with exactly 4 options, with the correct answer ALWAYS in the first position.`
 
     console.log('Calling Gemini API...')
     console.log('Model: gemini-2.5-flash')
