@@ -2,6 +2,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "installCommand": "npm install --legacy-peer-deps",
+  "ignoreCommand": "exit 0",
   "rewrites": [
     {
       "source": "/(.*)",
