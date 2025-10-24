@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { convertDocxToPdf } from '../utils/convertDocxToPdf'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -82,9 +83,37 @@ export default async function handler(
 
     console.log('File downloaded successfully, size:', fileData.size, 'bytes')
 
+    // Handle DOCX conversion to PDF
+    let processedBuffer: Buffer;
+    let finalMimeType: string = upload.mime_type || 'application/pdf';
+    
+    const arrayBuffer = await fileData.arrayBuffer();
+    let fileBuffer = Buffer.from(arrayBuffer);
+
+    // Check if file is DOCX and needs conversion
+    if (upload.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      console.log('🔄 DOCX file detected, converting to PDF...');
+      
+      try {
+        processedBuffer = await convertDocxToPdf(fileBuffer);
+        finalMimeType = 'application/pdf';
+        console.log('✅ DOCX converted to PDF successfully, new size:', processedBuffer.length, 'bytes');
+      } catch (conversionError: any) {
+        console.error('❌ DOCX conversion failed:', conversionError);
+        throw new Error(`DOCX conversion failed: ${conversionError.message}`);
+      }
+    } else if (upload.mime_type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      // PPTX file - not supported yet
+      console.error('❌ PPTX files are not supported yet');
+      throw new Error('PowerPoint files are not supported yet. Please convert to PDF first.');
+    } else {
+      // Already PDF or other supported format
+      processedBuffer = fileBuffer;
+      console.log('📄 File is already in supported format:', finalMimeType);
+    }
+
     // Convert file to base64 for Gemini
-    const arrayBuffer = await fileData.arrayBuffer()
-    const base64Data = Buffer.from(arrayBuffer).toString('base64')
+    const base64Data = processedBuffer.toString('base64');
     console.log('File converted to base64, length:', base64Data.length)
 
     // Prepare the prompt for Gemini
@@ -144,6 +173,7 @@ Remember: ALL questions must be multiple choice format with exactly 4 options, w
 
     console.log('Calling Gemini API...')
     console.log('Model: gemini-1.5-flash')
+    console.log('MIME type:', finalMimeType)
 
     // Call Gemini API
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
@@ -152,7 +182,7 @@ Remember: ALL questions must be multiple choice format with exactly 4 options, w
       prompt,
       {
         inlineData: {
-          mimeType: 'application/pdf',
+          mimeType: finalMimeType, // Use the processed file's mime type (always PDF after conversion)
           data: base64Data,
         },
       },

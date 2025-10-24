@@ -161,19 +161,20 @@ Supabase Dashboard → Storage → Buckets → `deck-uploads`
 
 Your AI processing is working when:
 
-- ✅ You can upload a PDF
+- ✅ You can upload a PDF or DOCX file
+- ✅ DOCX files are automatically converted to PDF (logged in console)
 - ✅ Progress bar shows "Processing with AI..."
 - ✅ After 5-30 seconds, flashcards are created
 - ✅ You can study the generated cards
 - ✅ Multiple choice questions have 4 options
-- ✅ Questions are relevant to the PDF content
+- ✅ Questions are relevant to the document content
 
 ## Next Steps 🎯
 
 Once AI processing is working:
 
 1. **Optimize prompts** - Adjust the Gemini prompt in `api/upload/process.ts`
-2. **Add support for more file types** - DOCX, PPTX conversion
+2. **Add PPTX support** - PowerPoint to PDF conversion
 3. **Implement background processing** - For large files
 4. **Add rate limiting** - Prevent abuse
 5. **Monitor costs** - Track Gemini API usage

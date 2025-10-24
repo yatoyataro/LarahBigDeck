@@ -126,26 +126,32 @@ Example output format:
 
 Currently supported:
 - ✅ **PDF** (`.pdf`) - Fully supported by Gemini
-- ⚠️ **DOCX** (`.docx`) - Requires conversion to PDF first
-- ⚠️ **PowerPoint** (`.pptx`) - Requires conversion to PDF first
+- ✅ **DOCX** (`.docx`) - **Automatically converted to PDF** before processing
+- ⚠️ **PowerPoint** (`.pptx`) - Not yet implemented (requires manual conversion)
 
-### Adding Support for DOCX/PPTX
+### DOCX Conversion
 
-To support DOCX/PPTX files, you would need to:
+The app now **automatically converts DOCX files to PDF** before sending to Gemini:
 
-1. Install a conversion library (e.g., `libreoffice` or `cloudconvert`)
-2. Convert the file to PDF before sending to Gemini
-3. Update the serverless function to handle conversion
+1. User uploads a DOCX file
+2. File is stored in Supabase Storage (as DOCX)
+3. During AI processing:
+   - Server downloads the DOCX file
+   - Extracts text using `mammoth` library
+   - Generates a clean PDF using `pdf-lib`
+   - Sends the PDF to Gemini API
+4. Cards are created from the PDF content
 
-Example (not implemented):
-```typescript
-// In api/upload/process.ts
-if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-  // Convert DOCX to PDF
-  const pdfBuffer = await convertDocxToPdf(fileData)
-  base64Data = pdfBuffer.toString('base64')
-}
-```
+**Conversion details:**
+- Text is extracted and cleaned (removes smart quotes, em dashes, etc.)
+- Basic formatting is preserved (paragraphs, spacing)
+- Images and complex formatting are NOT preserved (text-only extraction)
+- Font: Helvetica, 12pt with standard margins
+
+**Limitations:**
+- Only text content is extracted (no images, charts, tables)
+- Complex formatting is simplified
+- Very large DOCX files may hit serverless timeout limits
 
 ## Deployment Structure
 
