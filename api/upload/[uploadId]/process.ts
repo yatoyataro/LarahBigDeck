@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI} from '@google/genai'
 import { convertDocxToPdf } from '../../utils/convertDocxToPdf'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL!
@@ -11,7 +11,7 @@ const geminiApiKey = process.env.GOOGLE_GEMINI_API_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(geminiApiKey)
+const genAI = new GoogleGenAI({ apiKey: geminiApiKey })
 
 /**
  * Process uploaded file with Gemini AI
@@ -187,25 +187,25 @@ Guidelines for quality questions:
 Remember: ALL questions must be multiple choice format with exactly 4 options, with the correct answer ALWAYS in the first position.`
 
     console.log('Calling Gemini API...')
-    console.log('Model: gemini-1.5-flash')
+    console.log('Model: gemini-2.0-flash-exp')
     console.log('MIME type:', finalMimeType)
 
-    // Call Gemini API
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: finalMimeType, // Use the processed file's mime type (always PDF after conversion)
-          data: base64Data,
+    // Call Gemini API using the new @google/genai SDK
+    const result = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash-exp',
+      contents: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: finalMimeType, // Use the processed file's mime type (always PDF after conversion)
+            data: base64Data,
+          },
         },
-      },
-    ])
+      ],
+    })
 
     console.log('✅ Gemini API response received')
-    const response = await result.response
-    const text = response.text()
+    const text = result.text
     console.log('Response length:', text.length, 'characters')
 
     // Parse the JSON response
