@@ -195,10 +195,40 @@ export async function getUploadStatus(uploadId: string) {
 
 /**
  * Process uploaded file with AI to generate flashcards
- * Note: This feature requires a backend AI service
+ * Calls the serverless API endpoint to process the file
  */
 export async function processUploadWithAI(uploadId: string) {
-  // This feature is currently disabled - requires backend AI processing
-  // You can implement this by deploying the backend API or using Supabase Edge Functions
-  throw new Error('AI processing is not available in this deployment. Please add cards manually or deploy the backend API.')
+  try {
+    // Get current origin/base URL
+    // In production, this will be the Vercel domain
+    // In development, it will be localhost
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'http://localhost:8080'
+
+    console.log('Processing upload with AI:', uploadId)
+    console.log('API Base URL:', baseUrl)
+
+    // Call the processing endpoint
+    const response = await fetch(`${baseUrl}/api/upload/${uploadId}/process`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('AI processing failed:', error)
+      throw new Error(error.error || error.message || 'Failed to process upload')
+    }
+
+    const result = await response.json()
+    console.log('AI processing successful:', result)
+    
+    return result
+  } catch (error) {
+    console.error('Error in processUploadWithAI:', error)
+    throw error
+  }
 }

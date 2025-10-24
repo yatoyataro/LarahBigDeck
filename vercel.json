@@ -3,8 +3,11 @@
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm install --legacy-peer-deps",
-  "ignoreCommand": "exit 0",
   "rewrites": [
+    {
+      "source": "/api/upload/:uploadId/process",
+      "destination": "/api/upload/process?uploadId=:uploadId"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
