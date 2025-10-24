@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FlipCard } from "@/components/FlipCard";
 import { MultipleChoice } from "@/components/MultipleChoice";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 import { CardEditor } from "@/components/CardEditor";
 import { DeckStatsCard } from "@/components/stats/DeckStatsCard";
 import { Switch } from "@/components/ui/switch";
@@ -142,17 +140,9 @@ const Study = () => {
     // Handle browser close/refresh
     const handleBeforeUnload = () => {
       if (sessionId) {
-        // Use sendBeacon for reliable async request on page unload
-        const url = `${API_BASE}/api/sessions/${sessionId}/beacon`;
-        const blob = new Blob(
-          [JSON.stringify({ completed_at: new Date().toISOString() })],
-          { type: 'application/json' }
-        );
-        
-        if (navigator.sendBeacon) {
-          const sent = navigator.sendBeacon(url, blob);
-          console.log('Session completion sent via beacon:', sent);
-        }
+        // Complete session using completeStudySession instead of beacon
+        // Note: This may not complete reliably on page close, but it's the best we can do
+        statsService.completeStudySession(sessionId).catch(console.error)
       }
     };
 

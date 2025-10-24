@@ -1,7 +1,5 @@
 import { supabase } from '@/utils/supabase/client'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
-
 export interface CardInput {
   question: string
   answer: string
@@ -197,25 +195,10 @@ export async function getUploadStatus(uploadId: string) {
 
 /**
  * Process uploaded file with AI to generate flashcards
+ * Note: This feature requires a backend AI service
  */
 export async function processUploadWithAI(uploadId: string) {
-  try {
-    const response = await fetch(`${API_BASE}/api/upload/${uploadId}/process`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to process upload')
-    }
-
-    return response.json()
-  } catch (error) {
-    console.error('Error processing upload with AI:', error)
-    throw error
-  }
+  // This feature is currently disabled - requires backend AI processing
+  // You can implement this by deploying the backend API or using Supabase Edge Functions
+  throw new Error('AI processing is not available in this deployment. Please add cards manually or deploy the backend API.')
 }
