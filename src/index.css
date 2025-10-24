@@ -1,0 +1,308 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Light Mode - Cream & Pastel Blue */
+    --background: 37 56% 96%;  /* #FCF8F2 cream */
+    --foreground: 220 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
+
+    --primary: 194 65% 65%;  /* #7EC8E3 pastel blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 191 74% 82%;  /* #ADE8F4 light pastel blue */
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 37 56% 92%;
+    --muted-foreground: 220 15% 45%;
+
+    --accent: 194 65% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 37 30% 88%;
+    --input: 37 30% 88%;
+    --ring: 194 65% 65%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(194 65% 65%), hsl(191 74% 82%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(37 56% 98%));
+    
+    /* Shadows */
+    --shadow-card: 0 4px 20px -2px hsl(194 65% 65% / 0.15);
+    --shadow-card-hover: 0 8px 30px -4px hsl(194 65% 65% / 0.25);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Dark Mode - Charcoal & Orange Glow */
+    --background: 222 17% 11%;  /* #1B1D23 deep charcoal */
+    --foreground: 40 96% 90%;
+
+    --card: 222 17% 15%;
+    --card-foreground: 40 96% 90%;
+
+    --popover: 222 17% 15%;
+    --popover-foreground: 40 96% 90%;
+
+    --primary: 30 100% 65%;  /* #FFA94D orange glow */
+    --primary-foreground: 222 17% 11%;
+
+    --secondary: 45 100% 75%;  /* #FFD880 yellow accent */
+    --secondary-foreground: 222 17% 11%;
+
+    --muted: 222 17% 20%;
+    --muted-foreground: 40 20% 65%;
+
+    --accent: 30 100% 65%;
+    --accent-foreground: 222 17% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 17% 25%;
+    --input: 222 17% 25%;
+    --ring: 30 100% 65%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(30 100% 65%), hsl(45 100% 75%));
+    --gradient-card: linear-gradient(145deg, hsl(222 17% 15%), hsl(222 17% 18%));
+    
+    /* Shadows with glow */
+    --shadow-card: 0 4px 20px -2px hsl(30 100% 65% / 0.2);
+    --shadow-card-hover: 0 8px 30px -4px hsl(30 100% 65% / 0.35);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: contain;
+    /* Optimize touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text size adjustment on mobile */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Improve button touch targets on mobile */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  .flip-card {
+    perspective: 1000px;
+    transition: transform 0.1s ease;
+    /* Responsive height */
+    min-height: 280px;
+    height: clamp(280px, 50vh, 450px);
+    width: 100%;
+  }
+  
+  /* Desktop hover effect - only on non-touch devices */
+  @media (hover: hover) and (pointer: fine) {
+    .flip-card:hover {
+      transform: scale(1.02);
+    }
+    
+    .flip-card:active {
+      transform: scale(0.98);
+    }
+  }
+  
+  /* Mobile tap feedback - only on touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    .flip-card:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    /* Improve performance on mobile */
+    will-change: transform;
+  }
+  
+  .flip-card-inner.flipped {
+    transform: rotateY(180deg);
+  }
+  
+  .flip-card-front,
+  .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    overflow: hidden;
+    /* Improve performance */
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
+  
+  /* Prevent text selection during flip */
+  .flip-card * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Responsive adjustments for mobile */
+  @media (max-width: 640px) {
+    .flip-card {
+      min-height: 240px;
+      height: clamp(240px, 45vh, 380px);
+    }
+  }
+  
+  /* Tablet optimization */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .flip-card {
+      min-height: 300px;
+      height: clamp(300px, 48vh, 420px);
+    }
+  }
+  
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  /* Card transition animations - Fast and smooth */
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutLeft {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .card-enter {
+    animation: slideInRight 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .card-exit {
+    animation: slideOutLeft 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .card-fade-in {
+    animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* Optimize animations for mobile devices */
+  @media (prefers-reduced-motion: reduce) {
+    .card-enter,
+    .card-exit,
+    .card-fade-in {
+      animation: none;
+      transition: opacity 0.2s ease;
+    }
+  }
+
+  /* Hardware acceleration for smooth animations */
+  .card-enter,
+  .card-exit,
+  .card-fade-in {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Text wrapping utilities for long content */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-wrap: anywhere;
+  }
+
+  .hyphens-auto {
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+  }
+
+  /* Ensure buttons can grow vertically */
+  button {
+    white-space: normal !important;
+  }
+}

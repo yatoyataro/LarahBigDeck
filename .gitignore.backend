@@ -1,0 +1,14 @@
+# Environment variables (never commit to git)
+.env.local
+.env
+
+# Next.js build output
+.next/
+out/
+
+# Vercel
+.vercel
+
+# Supabase
+supabase/.branches
+supabase/.temp
