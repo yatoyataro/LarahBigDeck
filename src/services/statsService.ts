@@ -3,7 +3,7 @@
  * Handles all API calls related to user statistics, sessions, and card interactions
  */
 
-const API_BASE = 'http://localhost:3001' // Backend API URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001' // Backend API URL
 
 export interface DeckStatistics {
   deck: {

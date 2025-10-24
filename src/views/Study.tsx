@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FlipCard } from "@/components/FlipCard";
 import { MultipleChoice } from "@/components/MultipleChoice";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 import { CardEditor } from "@/components/CardEditor";
 import { DeckStatsCard } from "@/components/stats/DeckStatsCard";
 import { Switch } from "@/components/ui/switch";
@@ -141,7 +143,7 @@ const Study = () => {
     const handleBeforeUnload = () => {
       if (sessionId) {
         // Use sendBeacon for reliable async request on page unload
-        const url = `http://localhost:3001/api/sessions/${sessionId}/beacon`;
+        const url = `${API_BASE}/api/sessions/${sessionId}/beacon`;
         const blob = new Blob(
           [JSON.stringify({ completed_at: new Date().toISOString() })],
           { type: 'application/json' }

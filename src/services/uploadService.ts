@@ -1,5 +1,7 @@
 import { supabase } from '@/utils/supabase/client'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+
 export interface CardInput {
   question: string
   answer: string
@@ -198,7 +200,7 @@ export async function getUploadStatus(uploadId: string) {
  */
 export async function processUploadWithAI(uploadId: string) {
   try {
-    const response = await fetch(`http://localhost:3001/api/upload/${uploadId}/process`, {
+    const response = await fetch(`${API_BASE}/api/upload/${uploadId}/process`, {
       method: 'POST',
       credentials: 'include',
       headers: {
