@@ -152,11 +152,11 @@ Here are the notes to analyze:
 ${notes}`
 
     console.log('Calling Gemini API...')
-    console.log('Model: gemini-2.0-flash-exp')
+    console.log('Model: gemini-2.5-flash')
 
     // Call Gemini API using the new @google/genai SDK
     const result = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     })
 

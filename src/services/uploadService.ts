@@ -263,9 +263,10 @@ export async function processUploadWithAI(uploadId: string) {
  */
 export async function processNotesWithAI(notes: string, deckName: string, deckDescription?: string) {
   try {
-    const { data: { user, session }, error: authError } = await supabase.auth.getUser()
+    // Get the session for authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user || !session) {
+    if (sessionError || !session) {
       throw new Error('Not authenticated')
     }
 
