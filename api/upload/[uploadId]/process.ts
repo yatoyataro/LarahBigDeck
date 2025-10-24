@@ -21,10 +21,24 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  console.log('=== Handler Called ===')
+  console.log('Method:', req.method)
+  console.log('Query:', req.query)
+  console.log('Headers:', req.headers)
+
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request')
+    return res.status(200).end()
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    console.log('Method not allowed:', req.method)
+    return res.status(405).json({ error: `Method ${req.method} not allowed. Use POST.` })
   }
+
+  console.log('POST request accepted, starting processing...')
 
   try {
     // Get uploadId from path parameter
