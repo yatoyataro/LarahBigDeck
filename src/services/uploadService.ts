@@ -256,3 +256,78 @@ export async function processUploadWithAI(uploadId: string) {
     throw error
   }
 }
+
+/**
+ * Process pasted notes with AI to generate flashcards
+ * Calls the serverless API endpoint to process text content
+ */
+export async function processNotesWithAI(notes: string, deckName: string, deckDescription?: string) {
+  try {
+    const { data: { user, session }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user || !session) {
+      throw new Error('Not authenticated')
+    }
+
+    // Get current origin/base URL
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'http://localhost:8080'
+
+    console.log('Processing notes with AI')
+    console.log('API Base URL:', baseUrl)
+    console.log('Notes length:', notes.length)
+
+    // Call the processing endpoint for text notes
+    const response = await fetch(`${baseUrl}/api/upload/process-notes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        notes: notes.trim(),
+        deckName: deckName.trim(),
+        deckDescription: deckDescription?.trim() || null,
+      }),
+    })
+
+    console.log('Response status:', response.status)
+    console.log('Response headers:', response.headers.get('content-type'))
+
+    // Check if response has content before parsing
+    const text = await response.text()
+    console.log('Response text (first 200 chars):', text.substring(0, 200))
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to process notes'
+      
+      try {
+        const error = JSON.parse(text)
+        errorMessage = error.error || error.message || errorMessage
+      } catch (parseError) {
+        // Response is not JSON, might be HTML error page
+        console.error('Non-JSON error response:', text)
+        errorMessage = `Server error (${response.status}): ${response.statusText}`
+      }
+      
+      console.error('AI processing failed:', errorMessage)
+      throw new Error(errorMessage)
+    }
+
+    let result
+    try {
+      result = JSON.parse(text)
+    } catch (parseError) {
+      console.error('Failed to parse success response as JSON:', text)
+      throw new Error('Invalid response from server')
+    }
+
+    console.log('AI processing successful:', result)
+    
+    return result
+  } catch (error) {
+    console.error('Error in processNotesWithAI:', error)
+    throw error
+  }
+}
