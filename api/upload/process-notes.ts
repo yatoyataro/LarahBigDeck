@@ -144,6 +144,7 @@ Guidelines for quality questions:
 - Test understanding, not just memorization
 - Cover different difficulty levels (easy, medium, hard)
 - Ensure the correct answer is definitively correct
+- Ensure to not make the right answer too obvious like the longest or most detailed option
 
 Remember: ALL questions must be multiple choice format with exactly 4 options, with the correct answer ALWAYS in the first position.
 
