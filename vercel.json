@@ -5,10 +5,6 @@
   "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     {
-      "source": "/api/upload/:uploadId/process",
-      "destination": "/api/upload/process?uploadId=:uploadId"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

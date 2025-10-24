@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { convertDocxToPdf } from '../utils/convertDocxToPdf'
+import { convertDocxToPdf } from '../../utils/convertDocxToPdf'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -15,7 +15,7 @@ const genAI = new GoogleGenerativeAI(geminiApiKey)
 
 /**
  * Process uploaded file with Gemini AI
- * POST /api/upload/process?uploadId=xxx
+ * POST /api/upload/[uploadId]/process
  */
 export default async function handler(
   req: VercelRequest,
@@ -27,6 +27,7 @@ export default async function handler(
   }
 
   try {
+    // Get uploadId from path parameter
     const { uploadId } = req.query
 
     if (!uploadId || typeof uploadId !== 'string') {
