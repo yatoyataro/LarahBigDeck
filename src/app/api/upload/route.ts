@@ -61,21 +61,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate file type (accept common document formats)
+    // Validate file type (only PDF and DOCX for AI processing)
     const allowedTypes = [
       'application/pdf',
-      'text/plain',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword',
-      'text/markdown',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ]
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
         {
           error: 'Validation error',
-          message: 'Unsupported file type. Allowed: PDF, TXT, DOCX, DOC, MD, PPTX',
+          message: 'Unsupported file type. Only PDF and DOCX files are allowed for AI flashcard generation.',
         },
         { status: 400 }
       )

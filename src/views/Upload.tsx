@@ -58,8 +58,8 @@ const Upload = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
-      if (validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+      const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if (validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.docx')) {
         setFileName(file.name);
         setSelectedFile(file);
         toast({
@@ -69,7 +69,7 @@ const Upload = () => {
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF, DOCX, or PPT file",
+          description: "Please upload a PDF or DOCX file only",
           variant: "destructive",
         });
       }
@@ -79,8 +79,8 @@ const Upload = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
-      if (validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+      const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if (validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.docx')) {
         setFileName(file.name);
         setSelectedFile(file);
         toast({
@@ -90,7 +90,7 @@ const Upload = () => {
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF, DOCX, or PPT file",
+          description: "Please upload a PDF or DOCX file only",
           variant: "destructive",
         });
       }
@@ -415,7 +415,7 @@ const Upload = () => {
                     <Input
                       id="file-upload"
                       type="file"
-                      accept=".pdf,.docx,.ppt,.pptx"
+                      accept=".pdf,.docx"
                       className="hidden"
                       onChange={handleFileChange}
                     />
@@ -429,7 +429,7 @@ const Upload = () => {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, DOCX, PPT (Max 20MB)
+                    Supported formats: PDF, DOCX (Max 10MB)
                   </p>
                 </div>
               </Card>
