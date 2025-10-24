@@ -3,6 +3,12 @@
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm install --legacy-peer-deps",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

@@ -217,13 +217,37 @@ export async function processUploadWithAI(uploadId: string) {
       },
     })
 
+    console.log('Response status:', response.status)
+    console.log('Response headers:', response.headers.get('content-type'))
+
+    // Check if response has content before parsing
+    const text = await response.text()
+    console.log('Response text (first 200 chars):', text.substring(0, 200))
+
     if (!response.ok) {
-      const error = await response.json()
-      console.error('AI processing failed:', error)
-      throw new Error(error.error || error.message || 'Failed to process upload')
+      let errorMessage = 'Failed to process upload'
+      
+      try {
+        const error = JSON.parse(text)
+        errorMessage = error.error || error.message || errorMessage
+      } catch (parseError) {
+        // Response is not JSON, might be HTML error page
+        console.error('Non-JSON error response:', text)
+        errorMessage = `Server error (${response.status}): ${response.statusText}`
+      }
+      
+      console.error('AI processing failed:', errorMessage)
+      throw new Error(errorMessage)
     }
 
-    const result = await response.json()
+    let result
+    try {
+      result = JSON.parse(text)
+    } catch (parseError) {
+      console.error('Failed to parse success response as JSON:', text)
+      throw new Error('Invalid response from server')
+    }
+
     console.log('AI processing successful:', result)
     
     return result
