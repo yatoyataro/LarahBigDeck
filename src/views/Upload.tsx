@@ -429,7 +429,7 @@ const Upload = () => {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, DOCX (Max 10MB)
+                    Supported formats: PDF, DOCX (Max 20MB)
                   </p>
                 </div>
               </Card>
