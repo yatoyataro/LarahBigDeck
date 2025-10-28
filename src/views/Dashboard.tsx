@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { getUserDecks, type DeckWithCardCount } from "@/services/deckService";
 import { useToast } from "@/hooks/use-toast";
 import { UserStatsOverview } from "@/components/stats/UserStatsOverview";
+import { supabase } from "@/utils/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -16,6 +17,46 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [decks, setDecks] = useState<DeckWithCardCount[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      
+      if (code) {
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('OAuth callback error:', error);
+            toast({
+              title: "Authentication failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else if (data.session) {
+            toast({
+              title: "Welcome!",
+              description: "You have successfully signed in with Google.",
+            });
+          }
+        } catch (err: any) {
+          console.error('OAuth exchange error:', err);
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred during sign in.",
+            variant: "destructive",
+          });
+        } finally {
+          // Clean up URL by removing the code parameter
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    };
+
+    handleOAuthCallback();
+  }, [toast]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
