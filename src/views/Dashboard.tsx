@@ -2,13 +2,16 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, BookOpen, Calendar, PackageOpen } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, BookOpen, Calendar, PackageOpen, Users, UserCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { getUserDecks, type DeckWithCardCount } from "@/services/deckService";
+import { getSharedDecks, type SharedDeck } from "@/services/sharingService";
 import { useToast } from "@/hooks/use-toast";
 import { UserStatsOverview } from "@/components/stats/UserStatsOverview";
+import { ShareButton } from "@/components/ShareButton";
 import { supabase } from "@/utils/supabase/client";
 
 const Dashboard = () => {
@@ -16,7 +19,9 @@ const Dashboard = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [decks, setDecks] = useState<DeckWithCardCount[]>([]);
+  const [sharedDecks, setSharedDecks] = useState<SharedDeck[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("my-decks");
 
   // Handle OAuth callback
   useEffect(() => {
@@ -73,9 +78,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       loadDecks();
+      loadSharedDecks();
+      
+      // Check if there's a pending share token from SharedDeck page
+      const pendingToken = localStorage.getItem('pending_share_token');
+      if (pendingToken) {
+        localStorage.removeItem('pending_share_token');
+        // Redirect to the share page now that user is authenticated
+        navigate(`/shared/${pendingToken}`);
+      }
     } else if (!authLoading && !isAuthenticated) {
       setLoading(false);
       setDecks([]);
+      setSharedDecks([]);
     }
   }, [isAuthenticated, authLoading]);
 
@@ -93,6 +108,15 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSharedDecks = async () => {
+    try {
+      const shared = await getSharedDecks();
+      setSharedDecks(shared);
+    } catch (error) {
+      console.error('Error loading shared decks:', error);
     }
   };
 
@@ -173,45 +197,121 @@ const Dashboard = () => {
                   <p className="text-muted-foreground text-sm sm:text-base">Loading your decks...</p>
                 </div>
               </div>
-            ) : decks.length === 0 ? (
-              renderEmptyState()
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
-                {decks.map((deck) => (
-                  <Card
-                    key={deck.id}
-                    className="p-4 sm:p-5 md:p-6 gradient-card shadow-card hover:shadow-card-hover transition-smooth cursor-pointer group active:scale-95 sm:active:scale-100"
-                    onClick={() => navigate(`/study/${deck.id}`)}
-                  >
-                    <div className="flex items-start justify-between mb-3 sm:mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg gradient-primary flex items-center justify-center shadow-card group-hover:scale-110 transition-smooth">
-                        <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-                      </div>
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="hidden sm:inline">{new Date(deck.created_at).toLocaleDateString()}</span>
-                        <span className="sm:hidden">{new Date(deck.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                      </div>
-                    </div>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+                  <TabsTrigger value="my-decks" className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    My Decks ({decks.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="shared" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Shared ({sharedDecks.length})
+                  </TabsTrigger>
+                </TabsList>
 
-                    <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2 group-hover:text-primary transition-smooth line-clamp-2">
-                      {deck.name}
-                    </h3>
-                    <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
-                      {deck.description || 'No description'}
-                    </p>
+                <TabsContent value="my-decks">
+                  {decks.length === 0 ? (
+                    renderEmptyState()
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
+                      {decks.map((deck) => (
+                        <Card
+                          key={deck.id}
+                          className="p-4 sm:p-5 md:p-6 gradient-card shadow-card hover:shadow-card-hover transition-smooth group"
+                        >
+                          <div 
+                            className="cursor-pointer"
+                            onClick={() => navigate(`/study/${deck.id}`)}
+                          >
+                            <div className="flex items-start justify-between mb-3 sm:mb-4">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg gradient-primary flex items-center justify-center shadow-card group-hover:scale-110 transition-smooth">
+                                <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+                              </div>
+                              <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline">{new Date(deck.created_at).toLocaleDateString()}</span>
+                                <span className="sm:hidden">{new Date(deck.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                              </div>
+                            </div>
 
-                    <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border">
-                      <span className="text-xs sm:text-sm font-medium">
-                        {deck.card_count} {deck.card_count === 1 ? 'card' : 'cards'}
-                      </span>
-                      <span className="text-xs sm:text-sm text-primary font-medium group-hover:underline">
-                        Study →
-                      </span>
+                            <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2 group-hover:text-primary transition-smooth line-clamp-2">
+                              {deck.name}
+                            </h3>
+                            <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
+                              {deck.description || 'No description'}
+                            </p>
+
+                            <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border">
+                              <span className="text-xs sm:text-sm font-medium">
+                                {deck.card_count} {deck.card_count === 1 ? 'card' : 'cards'}
+                              </span>
+                              <span className="text-xs sm:text-sm text-primary font-medium group-hover:underline">
+                                Study →
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Share button - prevent click propagation */}
+                          <div className="mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                            <ShareButton deckId={deck.id} deckName={deck.name} />
+                          </div>
+                        </Card>
+                      ))}
                     </div>
-                  </Card>
-                ))}
-              </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="shared">
+                  {sharedDecks.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4 sm:mb-6">
+                        <Users className="h-10 w-10 sm:h-12 sm:w-12 text-primary" />
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-bold mb-2 text-center">No Shared Decks</h3>
+                      <p className="text-muted-foreground text-center max-w-md text-sm sm:text-base px-2">
+                        When someone shares a deck with you, it will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
+                      {sharedDecks.map((deck) => (
+                        <Card
+                          key={deck.deck_id}
+                          className="p-4 sm:p-5 md:p-6 gradient-card shadow-card hover:shadow-card-hover transition-smooth cursor-pointer group active:scale-95 sm:active:scale-100"
+                          onClick={() => navigate(`/study/${deck.deck_id}`)}
+                        >
+                          <div className="flex items-start justify-between mb-3 sm:mb-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg gradient-primary flex items-center justify-center shadow-card group-hover:scale-110 transition-smooth">
+                              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+                            </div>
+                            <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                              <UserCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="truncate max-w-[100px]">{deck.owner_name}</span>
+                            </div>
+                          </div>
+
+                          <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2 group-hover:text-primary transition-smooth line-clamp-2">
+                            {deck.deck_name}
+                          </h3>
+                          <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
+                            {deck.deck_description || 'No description'}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border">
+                            <span className="text-xs sm:text-sm font-medium">
+                              {deck.card_count} {deck.card_count === 1 ? 'card' : 'cards'}
+                            </span>
+                            <span className="text-xs sm:text-sm text-primary font-medium group-hover:underline">
+                              Study →
+                            </span>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </>
         )}
