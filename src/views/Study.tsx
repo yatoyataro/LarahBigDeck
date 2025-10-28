@@ -251,6 +251,19 @@ const Study = () => {
         sessionId: sessionId || undefined,
         responseTime: sessionStartTime ? (Date.now() - sessionStartTime) / 1000 : undefined,
         interactionType: 'flip'
+      }).then((result: any) => {
+        // Check if card was auto-flagged
+        if (result.auto_flagged) {
+          // Add to flagged cards set
+          setFlaggedCards(prev => new Set(prev).add(currentCard.id));
+          
+          // Show notification
+          toast({
+            title: "Card auto-flagged 🚩",
+            description: "This card was flagged for review due to low accuracy.",
+            duration: 4000,
+          });
+        }
       }).catch(error => console.error('Error updating card stats:', error));
     }
 
@@ -281,6 +294,19 @@ const Study = () => {
         sessionId: sessionId || undefined,
         responseTime: sessionStartTime ? (Date.now() - sessionStartTime) / 1000 : undefined,
         interactionType: 'multiple_choice'
+      }).then((result: any) => {
+        // Check if card was auto-flagged
+        if (result.auto_flagged) {
+          // Add to flagged cards set
+          setFlaggedCards(prev => new Set(prev).add(currentCard.id));
+          
+          // Show notification
+          toast({
+            title: "Card auto-flagged 🚩",
+            description: "This card was flagged for review due to low accuracy.",
+            duration: 4000,
+          });
+        }
       }).catch(error => console.error('Error updating card stats:', error));
     }
 

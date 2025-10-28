@@ -475,6 +475,7 @@ export async function getCardStats(cardId: string): Promise<CardStats> {
 
 /**
  * Update card statistics after user interaction
+ * Automatically flags cards with low accuracy
  */
 export async function updateCardStats(
   cardId: string,
@@ -499,6 +500,27 @@ export async function updateCardStats(
   const correct = (existingData.correct || 0) + (data.correct ? 1 : 0)
   const currentStreak = data.correct ? (existingData.current_streak || 0) + 1 : 0
   const bestStreak = Math.max(existingData.best_streak || 0, currentStreak)
+
+  // Calculate accuracy for auto-flagging
+  const accuracy = attempts > 0 ? (correct / attempts) * 100 : 0
+  
+  // Auto-flag logic: Flag if accuracy < 50% after at least 5 attempts
+  // Only auto-flag if not manually unflagged before
+  const AUTO_FLAG_THRESHOLD = 50 // Accuracy percentage
+  const MIN_ATTEMPTS_FOR_AUTO_FLAG = 5
+  
+  let shouldAutoFlag = false
+  let flagged = existingData.flagged || false
+  let flaggedAt = existingData.flagged_at || null
+  
+  if (attempts >= MIN_ATTEMPTS_FOR_AUTO_FLAG && accuracy < AUTO_FLAG_THRESHOLD) {
+    // Auto-flag if not already flagged
+    if (!flagged) {
+      shouldAutoFlag = true
+      flagged = true
+      flaggedAt = new Date().toISOString()
+    }
+  }
 
   // Calculate new ease factor (SM-2 algorithm)
   let easeFactor = existingData.ease_factor || 2.5
@@ -527,7 +549,9 @@ export async function updateCardStats(
     best_streak: bestStreak,
     ease_factor: easeFactor,
     interval_days: intervalDays,
-    last_reviewed_at: new Date().toISOString()
+    last_reviewed_at: new Date().toISOString(),
+    flagged,
+    flagged_at: flaggedAt
   }
 
   const { data: updated, error } = await supabase
@@ -541,7 +565,9 @@ export async function updateCardStats(
   }
 
   const updatedData = updated as any
-  return {
+  
+  // Return auto-flag status for UI notification
+  const result: CardStats & { auto_flagged?: boolean } = {
     card_id: updatedData.card_id,
     attempts: updatedData.attempts,
     correct: updatedData.correct,
@@ -553,6 +579,12 @@ export async function updateCardStats(
     ease_factor: updatedData.ease_factor,
     interval_days: updatedData.interval_days
   }
+  
+  if (shouldAutoFlag) {
+    (result as any).auto_flagged = true
+  }
+  
+  return result
 }
 
 /**
