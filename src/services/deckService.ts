@@ -108,20 +108,21 @@ export async function getDeck(deckId: string): Promise<Deck | null> {
       throw new Error('Not authenticated')
     }
 
+    // Don't filter by user_id - let RLS handle access control
+    // This allows viewing both owned decks AND shared decks
     const { data, error } = await supabase
       .from('decks')
       .select('*')
       .eq('id', deckId)
-      .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found
-        return null
-      }
       console.error('Error fetching deck:', error)
       throw error
+    }
+
+    if (!data) {
+      return null
     }
 
     return data as Deck
@@ -288,19 +289,8 @@ export async function getDeckCards(deckId: string): Promise<Card[]> {
       throw new Error('Not authenticated')
     }
 
-    // First verify the deck belongs to the user
-    const { data: deck, error: deckError } = await supabase
-      .from('decks')
-      .select('id')
-      .eq('id', deckId)
-      .eq('user_id', user.id)
-      .single()
-
-    if (deckError || !deck) {
-      throw new Error('Deck not found or access denied')
-    }
-
-    // Fetch cards for the deck
+    // Don't verify ownership - let RLS handle access control
+    // This allows fetching cards from both owned decks AND shared decks
     const { data: cards, error: cardsError } = await supabase
       .from('cards')
       .select('*')
