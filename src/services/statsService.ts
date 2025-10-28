@@ -601,6 +601,34 @@ export async function updateCardStats(
         (result as any).auto_flagged = true
       }
       
+      // Update session stats if sessionId is provided
+      if (data.sessionId) {
+        try {
+          // Get current session stats
+          const { data: session } = await supabase
+            .from('study_sessions')
+            .select('cards_studied, cards_correct')
+            .eq('id', data.sessionId)
+            .single()
+          
+          if (session) {
+            const sessionData = session as any
+            const updatePayload = {
+              cards_studied: (sessionData.cards_studied || 0) + 1,
+              cards_correct: (sessionData.cards_correct || 0) + (data.correct ? 1 : 0)
+            }
+            
+            await (supabase
+              .from('study_sessions')
+              .update as any)(updatePayload)
+              .eq('id', data.sessionId)
+          }
+        } catch (sessionError) {
+          console.error('Error updating session stats:', sessionError)
+          // Don't throw - session tracking is not critical
+        }
+      }
+      
       return result
     } catch (error) {
       if (retries > 1) {
