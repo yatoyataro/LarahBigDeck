@@ -118,6 +118,28 @@ export async function POST(
     5. Make the incorrect options challenging but clearly wrong to someone who knows the material
     6. Add relevant tags for categorization
 
+    CRITICAL GUIDELINES FOR ANSWER OPTIONS:
+    - ALL four options MUST be similar in length (within 10-20% word count)
+    - DO NOT make the correct answer significantly longer or more detailed than the distractors
+    - DO NOT include multiple concepts or clauses only in the correct answer
+    - Each option should use similar sentence structure and complexity
+    - Avoid patterns where correct answers are always the most comprehensive or detailed
+    - Distractors should be specific and concrete, not vague or obviously wrong
+    - Each option should stand alone as a complete, plausible answer
+    - Use parallel construction across all four options
+
+    BAD EXAMPLE (avoid this):
+    ❌ "An interdisciplinary field that combines mathematics, computer science, and domain-specific knowledge to model, simulate, and solve real-world problems efficiently."
+    ❌ "A type of software"
+    ❌ "A programming language"
+    ❌ "Computer hardware"
+
+    GOOD EXAMPLE (aim for this):
+    ✓ "An interdisciplinary field combining mathematics, computer science, and domain knowledge"
+    ✓ "A field focused on developing algorithms for complex mathematical equations"
+    ✓ "A branch of computer science dedicated to optimizing hardware performance"
+    ✓ "The study of theoretical physics using traditional analytical methods"
+
     Return the questions in the following JSON format:
     {
     "flashcards": [
@@ -125,7 +147,7 @@ export async function POST(
         "question": "Which of the following best describes...",
         "answer": "The correct answer",
         "type": "multiple_choice",
-        "options": ["Correct answer", "Incorrect option 1", "Incorrect option 2", "Incorrect option 3"],
+        "options": ["Correct answer (concise)", "Wrong but plausible (same length)", "Another incorrect (same length)", "Third wrong answer (same length)"],
         "tags": ["topic1", "topic2"]
         },
         {
@@ -150,12 +172,15 @@ export async function POST(
     Guidelines for quality questions:
     - Questions should be clear and unambiguous
     - Avoid "all of the above" or "none of the above" options
-    - Make distractors realistic and based on common misconceptions
+    - Make distractors realistic and based on common misconceptions or related concepts
     - Test understanding, not just memorization
     - Cover different difficulty levels (easy, medium, hard)
     - Ensure the correct answer is definitively correct
+    - BALANCE THE LENGTH: Each option should have roughly the same word count
+    - Use specific, concrete language in ALL options, not just the correct answer
+    - Distractors should be wrong for subtle conceptual reasons, not obvious lack of detail
 
-    Remember: ALL questions must be multiple choice format with exactly 4 options, with the correct answer ALWAYS in the first position.`
+    Remember: ALL questions must be multiple choice format with exactly 4 options of SIMILAR LENGTH, with the correct answer ALWAYS in the first position.`
 
     console.log('Calling Gemini API...')
     console.log('Model: gemini-2.5-flash')
