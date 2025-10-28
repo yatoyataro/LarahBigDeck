@@ -487,104 +487,134 @@ export async function updateCardStats(
     throw new Error('Not authenticated')
   }
 
-  // Get existing stats
-  const { data: existing } = await supabase
-    .from('user_card_stats')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('card_id', cardId)
-    .maybeSingle()
+  // Retry logic to handle race conditions
+  let retries = 3
+  let lastError: any = null
 
-  const existingData = (existing as any) || {}
-  const attempts = (existingData.attempts || 0) + 1
-  const correct = (existingData.correct || 0) + (data.correct ? 1 : 0)
-  const currentStreak = data.correct ? (existingData.current_streak || 0) + 1 : 0
-  const bestStreak = Math.max(existingData.best_streak || 0, currentStreak)
+  while (retries > 0) {
+    try {
+      // Get existing stats with a fresh read
+      const { data: existing } = await supabase
+        .from('user_card_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('card_id', cardId)
+        .maybeSingle()
 
-  // Calculate accuracy for auto-flagging
-  const accuracy = attempts > 0 ? (correct / attempts) * 100 : 0
-  
-  // Auto-flag logic: Flag if accuracy < 50% after at least 5 attempts
-  // Only auto-flag if not manually unflagged before
-  const AUTO_FLAG_THRESHOLD = 50 // Accuracy percentage
-  const MIN_ATTEMPTS_FOR_AUTO_FLAG = 5
-  
-  let shouldAutoFlag = false
-  let flagged = existingData.flagged || false
-  let flaggedAt = existingData.flagged_at || null
-  
-  if (attempts >= MIN_ATTEMPTS_FOR_AUTO_FLAG && accuracy < AUTO_FLAG_THRESHOLD) {
-    // Auto-flag if not already flagged
-    if (!flagged) {
-      shouldAutoFlag = true
-      flagged = true
-      flaggedAt = new Date().toISOString()
+      const existingData = (existing as any) || {}
+      const attempts = (existingData.attempts || 0) + 1
+      const correct = (existingData.correct || 0) + (data.correct ? 1 : 0)
+      const currentStreak = data.correct ? (existingData.current_streak || 0) + 1 : 0
+      const bestStreak = Math.max(existingData.best_streak || 0, currentStreak)
+
+      // Calculate accuracy for auto-flagging
+      const accuracy = attempts > 0 ? (correct / attempts) * 100 : 0
+      
+      // Auto-flag logic: Flag if accuracy < 50% after at least 5 attempts
+      // Only auto-flag if not manually unflagged before
+      const AUTO_FLAG_THRESHOLD = 50 // Accuracy percentage
+      const MIN_ATTEMPTS_FOR_AUTO_FLAG = 5
+      
+      let shouldAutoFlag = false
+      let flagged = existingData.flagged || false
+      let flaggedAt = existingData.flagged_at || null
+      
+      if (attempts >= MIN_ATTEMPTS_FOR_AUTO_FLAG && accuracy < AUTO_FLAG_THRESHOLD) {
+        // Auto-flag if not already flagged
+        if (!flagged) {
+          shouldAutoFlag = true
+          flagged = true
+          flaggedAt = new Date().toISOString()
+        }
+      }
+
+      // Calculate new ease factor (SM-2 algorithm)
+      let easeFactor = existingData.ease_factor || 2.5
+      if (data.correct) {
+        easeFactor = Math.max(1.3, easeFactor + 0.1)
+      } else {
+        easeFactor = Math.max(1.3, easeFactor - 0.2)
+      }
+
+      // Calculate new interval
+      let intervalDays = existingData.interval_days || 0
+      if (data.correct) {
+        if (currentStreak === 1) intervalDays = 1
+        else if (currentStreak === 2) intervalDays = 6
+        else intervalDays = Math.round((existingData.interval_days || 0) * easeFactor)
+      } else {
+        intervalDays = 0
+      }
+
+      const updateData = {
+        user_id: user.id,
+        card_id: cardId,
+        attempts,
+        correct,
+        current_streak: currentStreak,
+        best_streak: bestStreak,
+        ease_factor: easeFactor,
+        interval_days: intervalDays,
+        last_reviewed_at: new Date().toISOString(),
+        flagged,
+        flagged_at: flaggedAt
+      }
+
+      const { data: updated, error } = await supabase
+        .from('user_card_stats')
+        .upsert(updateData as any, {
+          onConflict: 'user_id,card_id',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single()
+
+      if (error) {
+        // If it's a conflict error, retry
+        if (error.code === '23505' && retries > 1) {
+          lastError = error
+          retries--
+          // Small random delay to avoid thundering herd
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100))
+          continue
+        }
+        throw new Error(error.message || 'Failed to update card statistics')
+      }
+
+      const updatedData = updated as any
+      
+      // Return auto-flag status for UI notification
+      const result: CardStats & { auto_flagged?: boolean } = {
+        card_id: updatedData.card_id,
+        attempts: updatedData.attempts,
+        correct: updatedData.correct,
+        accuracy: updatedData.attempts > 0 ? Math.round((updatedData.correct / updatedData.attempts) * 100) : 0,
+        flagged: updatedData.flagged,
+        last_reviewed_at: updatedData.last_reviewed_at,
+        current_streak: updatedData.current_streak,
+        best_streak: updatedData.best_streak,
+        ease_factor: updatedData.ease_factor,
+        interval_days: updatedData.interval_days
+      }
+      
+      if (shouldAutoFlag) {
+        (result as any).auto_flagged = true
+      }
+      
+      return result
+    } catch (error) {
+      if (retries > 1) {
+        lastError = error
+        retries--
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100))
+        continue
+      }
+      throw error
     }
   }
 
-  // Calculate new ease factor (SM-2 algorithm)
-  let easeFactor = existingData.ease_factor || 2.5
-  if (data.correct) {
-    easeFactor = Math.max(1.3, easeFactor + 0.1)
-  } else {
-    easeFactor = Math.max(1.3, easeFactor - 0.2)
-  }
-
-  // Calculate new interval
-  let intervalDays = existingData.interval_days || 0
-  if (data.correct) {
-    if (currentStreak === 1) intervalDays = 1
-    else if (currentStreak === 2) intervalDays = 6
-    else intervalDays = Math.round((existingData.interval_days || 0) * easeFactor)
-  } else {
-    intervalDays = 0
-  }
-
-  const updateData = {
-    user_id: user.id,
-    card_id: cardId,
-    attempts,
-    correct,
-    current_streak: currentStreak,
-    best_streak: bestStreak,
-    ease_factor: easeFactor,
-    interval_days: intervalDays,
-    last_reviewed_at: new Date().toISOString(),
-    flagged,
-    flagged_at: flaggedAt
-  }
-
-  const { data: updated, error } = await supabase
-    .from('user_card_stats')
-    .upsert(updateData as any)
-    .select()
-    .single()
-
-  if (error) {
-    throw new Error(error.message || 'Failed to update card statistics')
-  }
-
-  const updatedData = updated as any
-  
-  // Return auto-flag status for UI notification
-  const result: CardStats & { auto_flagged?: boolean } = {
-    card_id: updatedData.card_id,
-    attempts: updatedData.attempts,
-    correct: updatedData.correct,
-    accuracy: updatedData.attempts > 0 ? Math.round((updatedData.correct / updatedData.attempts) * 100) : 0,
-    flagged: updatedData.flagged,
-    last_reviewed_at: updatedData.last_reviewed_at,
-    current_streak: updatedData.current_streak,
-    best_streak: updatedData.best_streak,
-    ease_factor: updatedData.ease_factor,
-    interval_days: updatedData.interval_days
-  }
-  
-  if (shouldAutoFlag) {
-    (result as any).auto_flagged = true
-  }
-  
-  return result
+  // If all retries failed
+  throw lastError || new Error('Failed to update card statistics after retries')
 }
 
 /**
