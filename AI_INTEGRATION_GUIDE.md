@@ -53,7 +53,7 @@ This document explains the AI-powered flashcard generation feature using Google'
   - Navigates to study page after successful generation
 
 #### 4. `.env`
-- **Added**: `GOOGLE_GEMINI_API_KEY=AIzaSyDlETuJlc7JIVe6DCQaXGZNz_Eb54NU2vo`
+- **Added**: `GOOGLE_GEMINI_API_KEY=`
 
 ## 🎯 How It Works
 
@@ -169,7 +169,7 @@ The prompt instructs Gemini to:
 
 ### Error: "404 Not Found - models/gemini-X not found"
 **Cause**: Using outdated model name
-**Solution**: Model should be `gemini-2.0-flash-exp` (already fixed in code)
+**Solution**: Model should be `gemini-2.5-flash` (already fixed in code)
 
 ### Error: "Failed to parse AI response"
 **Cause**: Gemini returned text that's not valid JSON
