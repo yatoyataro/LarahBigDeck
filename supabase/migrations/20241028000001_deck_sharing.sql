@@ -30,13 +30,13 @@ CREATE TABLE IF NOT EXISTS shared_deck_access (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_deck_shares_deck_id ON deck_shares(deck_id);
-CREATE INDEX idx_deck_shares_owner_id ON deck_shares(owner_id);
-CREATE INDEX idx_deck_shares_token ON deck_shares(share_token);
-CREATE INDEX idx_deck_shares_public ON deck_shares(is_public) WHERE is_public = true;
-CREATE INDEX idx_shared_deck_access_user_id ON shared_deck_access(user_id);
-CREATE INDEX idx_shared_deck_access_deck_id ON shared_deck_access(deck_id);
-CREATE INDEX idx_shared_deck_access_share_id ON shared_deck_access(share_id);
+CREATE INDEX IF NOT EXISTS idx_deck_shares_deck_id ON deck_shares(deck_id);
+CREATE INDEX IF NOT EXISTS idx_deck_shares_owner_id ON deck_shares(owner_id);
+CREATE INDEX IF NOT EXISTS idx_deck_shares_token ON deck_shares(share_token);
+CREATE INDEX IF NOT EXISTS idx_deck_shares_public ON deck_shares(is_public) WHERE is_public = true;
+CREATE INDEX IF NOT EXISTS idx_shared_deck_access_user_id ON shared_deck_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_shared_deck_access_deck_id ON shared_deck_access(deck_id);
+CREATE INDEX IF NOT EXISTS idx_shared_deck_access_share_id ON shared_deck_access(share_id);
 
 -- Function to increment view count
 CREATE OR REPLACE FUNCTION increment_share_view_count()
@@ -50,6 +50,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-increment view count when someone accesses a shared deck
+DROP TRIGGER IF EXISTS increment_share_views ON shared_deck_access;
 CREATE TRIGGER increment_share_views
   AFTER INSERT ON shared_deck_access
   FOR EACH ROW
@@ -62,11 +63,13 @@ ALTER TABLE shared_deck_access ENABLE ROW LEVEL SECURITY;
 -- RLS Policies for deck_shares
 
 -- Owners can view their own shared deck records
+DROP POLICY IF EXISTS "Owners can view their shared decks" ON deck_shares;
 CREATE POLICY "Owners can view their shared decks"
   ON deck_shares FOR SELECT
   USING (auth.uid() = owner_id);
 
 -- Owners can create share links for their decks
+DROP POLICY IF EXISTS "Owners can create share links" ON deck_shares;
 CREATE POLICY "Owners can create share links"
   ON deck_shares FOR INSERT
   WITH CHECK (
@@ -79,17 +82,20 @@ CREATE POLICY "Owners can create share links"
   );
 
 -- Owners can update their share links
+DROP POLICY IF EXISTS "Owners can update their share links" ON deck_shares;
 CREATE POLICY "Owners can update their share links"
   ON deck_shares FOR UPDATE
   USING (auth.uid() = owner_id)
   WITH CHECK (auth.uid() = owner_id);
 
 -- Owners can delete their share links
+DROP POLICY IF EXISTS "Owners can delete their share links" ON deck_shares;
 CREATE POLICY "Owners can delete their share links"
   ON deck_shares FOR DELETE
   USING (auth.uid() = owner_id);
 
 -- Anyone can view public share links by token (for validation)
+DROP POLICY IF EXISTS "Public share links are viewable by token" ON deck_shares;
 CREATE POLICY "Public share links are viewable by token"
   ON deck_shares FOR SELECT
   USING (is_public = true AND (expires_at IS NULL OR expires_at > NOW()));
@@ -97,28 +103,32 @@ CREATE POLICY "Public share links are viewable by token"
 -- RLS Policies for shared_deck_access
 
 -- Users can view their own shared deck access records
+DROP POLICY IF EXISTS "Users can view their shared deck access" ON shared_deck_access;
 CREATE POLICY "Users can view their shared deck access"
   ON shared_deck_access FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Owners can view who accessed their shared decks
+DROP POLICY IF EXISTS "Owners can view access to their shared decks" ON shared_deck_access;
 CREATE POLICY "Owners can view access to their shared decks"
   ON shared_deck_access FOR SELECT
   USING (auth.uid() = owner_id);
 
 -- Authenticated users can record access to shared decks
+DROP POLICY IF EXISTS "Users can record shared deck access" ON shared_deck_access;
 CREATE POLICY "Users can record shared deck access"
   ON shared_deck_access FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own access records (for last_studied_at)
+DROP POLICY IF EXISTS "Users can update their shared deck access" ON shared_deck_access;
 CREATE POLICY "Users can update their shared deck access"
   ON shared_deck_access FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 -- Update decks RLS policies to allow viewing shared decks
--- Users can view decks they own OR decks that are shared with them
+-- Users can view decks they own OR decks that are shared with them OR decks with public share links
 DROP POLICY IF EXISTS "Users can view their own decks" ON decks;
 
 CREATE POLICY "Users can view their own decks"
@@ -130,10 +140,16 @@ CREATE POLICY "Users can view their own decks"
       WHERE shared_deck_access.deck_id = decks.id
       AND shared_deck_access.user_id = auth.uid()
     )
+    OR EXISTS (
+      SELECT 1 FROM deck_shares
+      WHERE deck_shares.deck_id = decks.id
+      AND deck_shares.is_public = true
+      AND (deck_shares.expires_at IS NULL OR deck_shares.expires_at > NOW())
+    )
   );
 
 -- Update cards RLS policies to allow viewing cards in shared decks
--- Users can view cards in their own decks OR in decks shared with them
+-- Users can view cards in their own decks OR in decks shared with them OR via public share links
 DROP POLICY IF EXISTS "Users can view cards in their decks" ON cards;
 
 CREATE POLICY "Users can view cards in their decks"
@@ -149,12 +165,19 @@ CREATE POLICY "Users can view cards in their decks"
           WHERE shared_deck_access.deck_id = decks.id
           AND shared_deck_access.user_id = auth.uid()
         )
+        OR EXISTS (
+          SELECT 1 FROM deck_shares
+          WHERE deck_shares.deck_id = decks.id
+          AND deck_shares.is_public = true
+          AND (deck_shares.expires_at IS NULL OR deck_shares.expires_at > NOW())
+        )
       )
     )
   );
 
 -- Create view for easier querying of shared decks with owner info
-CREATE OR REPLACE VIEW shared_decks_view AS
+DROP VIEW IF EXISTS shared_decks_view CASCADE;
+CREATE VIEW shared_decks_view AS
 SELECT 
   sda.id as access_id,
   sda.user_id,
@@ -170,7 +193,7 @@ SELECT
   ds.share_token,
   ds.created_at as shared_at,
   -- Get owner's display name or fallback to 'Deck Owner'
-  COALESCE(up.display_name, 'Deck Owner') as owner_name
+  COALESCE(up.display_name::text, 'Deck Owner'::text) as owner_name
 FROM shared_deck_access sda
 JOIN decks d ON d.id = sda.deck_id
 JOIN deck_shares ds ON ds.id = sda.share_id

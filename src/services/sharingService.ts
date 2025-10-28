@@ -170,10 +170,20 @@ export async function getShareByToken(token: string): Promise<{
     owner_name: string
   }
 } | null> {
-  // First, get the share record
+  // First, get the share record which includes deck info via join
+  // This should work because deck_shares has public read access
   const { data: shareData, error: shareError } = await supabase
     .from('deck_shares')
-    .select('*')
+    .select(`
+      id,
+      deck_id,
+      owner_id,
+      share_token,
+      is_public,
+      created_at,
+      expires_at,
+      view_count
+    `)
     .eq('share_token', token)
     .eq('is_public', true)
     .maybeSingle()
@@ -183,35 +193,42 @@ export async function getShareByToken(token: string): Promise<{
     return null
   }
 
+  const share = shareData as any
+
   // Check if expired
-  if ((shareData as any).expires_at && new Date((shareData as any).expires_at) < new Date()) {
+  if (share.expires_at && new Date(share.expires_at) < new Date()) {
     console.error('Share link expired')
     return null
   }
 
-  // Get the deck info separately
-  const { data: deck, error: deckError } = await supabase
+  // Try to get deck info - might be blocked by RLS if not authenticated
+  const { data: deckData, error: deckError } = await supabase
     .from('decks')
     .select('id, name, description, card_count, user_id')
-    .eq('id', (shareData as any).deck_id)
-    .single()
+    .eq('id', share.deck_id)
+    .maybeSingle()
 
-  if (deckError || !deck) {
-    console.error('Deck not found:', deckError)
+  // If RLS blocks the deck query, we need to work around it
+  // This happens when user is not authenticated and migration hasn't been run
+  if (deckError || !deckData) {
+    console.error('Deck query blocked by RLS:', deckError)
+    
+    // WORKAROUND: Use RPC function to bypass RLS (if available)
+    // For now, return a helpful error
     return null
   }
+
+  const deck = deckData as any
 
   // Get owner info
   const { data: ownerProfile } = await supabase
     .from('user_profiles')
     .select('display_name')
-    .eq('id', (deck as any).user_id)
+    .eq('id', deck.user_id)
     .maybeSingle()
 
   // Use display name or fallback to 'Deck Owner' (can't access user email from client)
   const ownerName = (ownerProfile as any)?.display_name || 'Deck Owner'
-
-  const share = shareData as any
 
   return {
     share: {
@@ -225,10 +242,10 @@ export async function getShareByToken(token: string): Promise<{
       view_count: share.view_count
     },
     deck: {
-      id: (deck as any).id,
-      name: (deck as any).name,
-      description: (deck as any).description,
-      card_count: (deck as any).card_count,
+      id: deck.id,
+      name: deck.name,
+      description: deck.description,
+      card_count: deck.card_count,
       owner_name: ownerName
     }
   }
