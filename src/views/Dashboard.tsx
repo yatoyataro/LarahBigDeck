@@ -26,20 +26,32 @@ const Dashboard = () => {
       
       if (code) {
         try {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          // Check if we already have a session (Supabase might have auto-exchanged)
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
           
-          if (error) {
-            console.error('OAuth callback error:', error);
-            toast({
-              title: "Authentication failed",
-              description: error.message,
-              variant: "destructive",
-            });
-          } else if (data.session) {
+          if (existingSession) {
+            // Session already exists, just show success message
             toast({
               title: "Welcome!",
               description: "You have successfully signed in with Google.",
             });
+          } else {
+            // No session yet, try to exchange the code
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+            
+            if (error) {
+              console.error('OAuth callback error:', error);
+              toast({
+                title: "Authentication failed",
+                description: error.message,
+                variant: "destructive",
+              });
+            } else if (data.session) {
+              toast({
+                title: "Welcome!",
+                description: "You have successfully signed in with Google.",
+              });
+            }
           }
         } catch (err: any) {
           console.error('OAuth exchange error:', err);
