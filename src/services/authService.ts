@@ -160,6 +160,55 @@ export class AuthService {
       return { error: error as Error }
     }
   }
+
+  /**
+   * Sign in with Google OAuth
+   */
+  async signInWithGoogle(): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (error) {
+        return { error }
+      }
+
+      return { error: null }
+    } catch (error) {
+      console.error('Error signing in with Google:', error)
+      return { error: error as Error }
+    }
+  }
+
+  /**
+   * Sign in with Google ID Token (for Google One-Tap)
+   */
+  async signInWithGoogleIdToken(token: string, nonce?: string): Promise<{ user: User | null; error: Error | null }> {
+    try {
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token,
+        nonce,
+      })
+
+      if (error) {
+        return { user: null, error }
+      }
+
+      return { user: data.user, error: null }
+    } catch (error) {
+      console.error('Error signing in with Google ID token:', error)
+      return { user: null, error: error as Error }
+    }
+  }
 }
 
 // Export singleton instance
