@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "next dev -p 3001",
-    "build": "vite build",
+    "build": "vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'dist/404.html')\"",
     "build:frontend": "vite build",
     "build:backend": "echo 'Backend build skipped - using serverless functions'",
     "build:api": "next build",
