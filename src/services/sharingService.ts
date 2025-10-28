@@ -170,32 +170,34 @@ export async function getShareByToken(token: string): Promise<{
     owner_name: string
   }
 } | null> {
-  // This query doesn't require auth - it's checking if the share link is valid
-  const { data: share, error: shareError } = await supabase
+  // First, get the share record
+  const { data: shareData, error: shareError } = await supabase
     .from('deck_shares')
-    .select(`
-      *,
-      decks (
-        id,
-        name,
-        description,
-        card_count,
-        user_id
-      )
-    `)
+    .select('*')
     .eq('share_token', token)
     .eq('is_public', true)
     .maybeSingle()
 
-  if (shareError || !share) {
+  if (shareError || !shareData) {
+    console.error('Share not found:', shareError)
     return null
   }
 
-  const shareData = share as any
-  const deck = shareData.decks
-
   // Check if expired
-  if (shareData.expires_at && new Date(shareData.expires_at) < new Date()) {
+  if ((shareData as any).expires_at && new Date((shareData as any).expires_at) < new Date()) {
+    console.error('Share link expired')
+    return null
+  }
+
+  // Get the deck info separately
+  const { data: deck, error: deckError } = await supabase
+    .from('decks')
+    .select('id, name, description, card_count, user_id')
+    .eq('id', (shareData as any).deck_id)
+    .single()
+
+  if (deckError || !deck) {
+    console.error('Deck not found:', deckError)
     return null
   }
 
@@ -203,28 +205,30 @@ export async function getShareByToken(token: string): Promise<{
   const { data: ownerProfile } = await supabase
     .from('user_profiles')
     .select('display_name')
-    .eq('id', deck.user_id)
+    .eq('id', (deck as any).user_id)
     .maybeSingle()
 
   // Use display name or fallback to 'Deck Owner' (can't access user email from client)
   const ownerName = (ownerProfile as any)?.display_name || 'Deck Owner'
 
+  const share = shareData as any
+
   return {
     share: {
-      id: shareData.id,
-      deck_id: shareData.deck_id,
-      owner_id: shareData.owner_id,
-      share_token: shareData.share_token,
-      is_public: shareData.is_public,
-      created_at: shareData.created_at,
-      expires_at: shareData.expires_at,
-      view_count: shareData.view_count
+      id: share.id,
+      deck_id: share.deck_id,
+      owner_id: share.owner_id,
+      share_token: share.share_token,
+      is_public: share.is_public,
+      created_at: share.created_at,
+      expires_at: share.expires_at,
+      view_count: share.view_count
     },
     deck: {
-      id: deck.id,
-      name: deck.name,
-      description: deck.description,
-      card_count: deck.card_count,
+      id: (deck as any).id,
+      name: (deck as any).name,
+      description: (deck as any).description,
+      card_count: (deck as any).card_count,
       owner_name: ownerName
     }
   }
@@ -240,24 +244,43 @@ export async function addSharedDeck(shareToken: string): Promise<SharedDeckAcces
     throw new Error('Please sign in to access shared decks')
   }
 
-  // Get share info
-  const { data: share, error: shareError } = await supabase
+  // Get share info - separate queries
+  const { data: shareData, error: shareError } = await supabase
     .from('deck_shares')
-    .select('*, decks(*)')
+    .select('*')
     .eq('share_token', shareToken)
     .eq('is_public', true)
     .single()
 
-  if (shareError || !share) {
+  if (shareError || !shareData) {
+    console.error('Share not found:', shareError)
     throw new Error('Share link not found or has expired')
   }
 
-  const shareData = share as any
-  const deck = shareData.decks
+  const share = shareData as any
 
   // Check if expired
-  if (shareData.expires_at && new Date(shareData.expires_at) < new Date()) {
+  if (share.expires_at && new Date(share.expires_at) < new Date()) {
     throw new Error('This share link has expired')
+  }
+
+  // Get deck info
+  const { data: deckData, error: deckError } = await supabase
+    .from('decks')
+    .select('*')
+    .eq('id', share.deck_id)
+    .single()
+
+  if (deckError || !deckData) {
+    console.error('Deck not found:', deckError)
+    throw new Error('Deck not found')
+  }
+
+  const deck = deckData as any
+
+  // Check if user is the owner
+  if (deck.user_id === user.id) {
+    throw new Error('You already own this deck')
   }
 
   // Check if user already has access
@@ -269,7 +292,8 @@ export async function addSharedDeck(shareToken: string): Promise<SharedDeckAcces
     .maybeSingle()
 
   if (existingAccess) {
-    // Already has access
+    // Already has access, but don't throw - just return it
+    console.log('User already has access to this deck')
     return existingAccess as any
   }
 
@@ -277,7 +301,7 @@ export async function addSharedDeck(shareToken: string): Promise<SharedDeckAcces
   const { data: access, error: accessError } = await supabase
     .from('shared_deck_access')
     .insert({
-      share_id: shareData.id,
+      share_id: share.id,
       deck_id: deck.id,
       user_id: user.id,
       owner_id: deck.user_id
@@ -286,6 +310,7 @@ export async function addSharedDeck(shareToken: string): Promise<SharedDeckAcces
     .single()
 
   if (accessError) {
+    console.error('Failed to create access record:', accessError)
     throw new Error(`Failed to add shared deck: ${accessError.message}`)
   }
 

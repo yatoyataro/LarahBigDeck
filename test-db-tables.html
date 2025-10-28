@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Database Tables</title>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    
+    // Replace with your actual values from .env
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE'
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE'
+    
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    
+    async function checkTables() {
+      const results = {
+        deck_shares: false,
+        shared_deck_access: false,
+        shared_decks_view: false
+      }
+      
+      // Check deck_shares table
+      try {
+        const { data, error } = await supabase.from('deck_shares').select('id').limit(1)
+        results.deck_shares = !error
+        console.log('deck_shares:', error ? error.message : 'EXISTS ✓')
+      } catch (e) {
+        console.log('deck_shares:', e.message)
+      }
+      
+      // Check shared_deck_access table
+      try {
+        const { data, error } = await supabase.from('shared_deck_access').select('id').limit(1)
+        results.shared_deck_access = !error
+        console.log('shared_deck_access:', error ? error.message : 'EXISTS ✓')
+      } catch (e) {
+        console.log('shared_deck_access:', e.message)
+      }
+      
+      // Check shared_decks_view
+      try {
+        const { data, error } = await supabase.from('shared_decks_view').select('deck_id').limit(1)
+        results.shared_decks_view = !error
+        console.log('shared_decks_view:', error ? error.message : 'EXISTS ✓')
+      } catch (e) {
+        console.log('shared_decks_view:', e.message)
+      }
+      
+      // Display results
+      const resultDiv = document.getElementById('results')
+      resultDiv.innerHTML = `
+        <h2>Database Table Check Results:</h2>
+        <ul>
+          <li>deck_shares: ${results.deck_shares ? '✅ EXISTS' : '❌ NOT FOUND'}</li>
+          <li>shared_deck_access: ${results.shared_deck_access ? '✅ EXISTS' : '❌ NOT FOUND'}</li>
+          <li>shared_decks_view: ${results.shared_decks_view ? '✅ EXISTS' : '❌ NOT FOUND'}</li>
+        </ul>
+        ${!results.deck_shares || !results.shared_deck_access || !results.shared_decks_view ? 
+          '<p style="color: red; font-weight: bold;">⚠️ MIGRATION NOT RUN! You need to run the migration in Supabase Dashboard.</p>' : 
+          '<p style="color: green; font-weight: bold;">✅ All tables exist! Migration has been run.</p>'}
+      `
+    }
+    
+    window.addEventListener('DOMContentLoaded', checkTables)
+  </script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    #results {
+      background: #2a2a2a;
+      padding: 2rem;
+      border-radius: 8px;
+      margin-top: 2rem;
+    }
+    ul {
+      font-size: 1.2rem;
+      line-height: 2;
+    }
+    .warning {
+      background: #ff4444;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Database Tables Check</h1>
+  <p>Replace SUPABASE_URL and SUPABASE_ANON_KEY in this file with your actual values.</p>
+  <p>Then open this file in a browser to check if the migration has been run.</p>
+  <div id="results">
+    <p>Checking tables...</p>
+  </div>
+</body>
+</html>
